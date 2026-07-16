@@ -283,6 +283,26 @@
     }
     .figure-stack { display: grid; gap: 20px; }
     .plot { max-width: 820px; margin-left: auto; margin-right: auto; }
+    .notebook-gallery {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 28px;
+      margin: 1.5rem 0;
+    }
+    .notebook-gallery figure { margin: 0; }
+    .notebook-gallery a {
+      display: block;
+      overflow: hidden;
+      border: 1px solid #cfd8d3;
+      border-radius: 6px;
+      background: white;
+    }
+    .notebook-gallery img {
+      width: 100%;
+      height: auto;
+      border: 0;
+      border-radius: 0;
+    }
 
     .step-list { counter-reset: steps; margin: 1.5rem 0; }
     .step {
@@ -365,7 +385,7 @@
       .shell, .topline-inner { width: min(100% - 26px, var(--max)); }
       h1 { font-size: 2.35rem; }
       h2 { font-size: 1.5rem; }
-      .hero-meta, .grid-2, .figure-pair, .metric-strip { grid-template-columns: 1fr; }
+      .hero-meta, .grid-2, .figure-pair, .metric-strip, .notebook-gallery { grid-template-columns: 1fr; }
       .hero-meta > div + div, .metric + .metric { padding-left: 0; border-left: 0; border-top: 1px solid var(--line); }
       .metric { padding-left: 0; }
       .check-row { grid-template-columns: 28px minmax(0, 1fr); }
@@ -583,6 +603,29 @@
           <div class="flow-box"><strong>Train and evaluate</strong><p>Run PPO and DQN checkpoints, then score them with the held-out demand stream.</p></div>
           <div class="flow-arrow" aria-hidden="true">&rarr;</div>
           <div class="flow-box"><strong>Inspect artifacts</strong><p>Review the raw CSV, summary CSV, learning-curve SVG, and provenance manifest.</p></div>
+        </div>
+
+        <h3>Notebook snapshots</h3>
+        <p>Three checkpoints from the executable walkthrough. Open any image for the full view.</p>
+        <div class="notebook-gallery">
+          <figure>
+            <a href="assets/notebook-setup.png" aria-label="Open the setup and environment validation notebook screenshot">
+              <img src="assets/notebook-setup.png" alt="Notebook cells for dependency setup and environment validation">
+            </a>
+            <figcaption>Setup and environment validation</figcaption>
+          </figure>
+          <figure>
+            <a href="assets/notebook-experiment-design.png" aria-label="Open the experiment design notebook screenshot">
+              <img src="assets/notebook-experiment-design.png" alt="Notebook explanation of experiment design and evaluation controls">
+            </a>
+            <figcaption>Experiment design and evaluation controls</figcaption>
+          </figure>
+          <figure>
+            <a href="assets/notebook-results-output.png" aria-label="Open the saved final results notebook screenshot">
+              <img src="assets/notebook-results-output.png" alt="Notebook code and output showing the saved final experiment results">
+            </a>
+            <figcaption>Saved final results</figcaption>
+          </figure>
         </div>
 
         <div class="callout"><p><strong>Two run modes:</strong> smoke mode checks the full workflow quickly; full mode regenerates all three-seed results. The manifest records package versions and SHA-256 hashes.</p></div>
