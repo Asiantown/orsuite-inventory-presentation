@@ -211,21 +211,21 @@ Run `git diff --check` and `git status --short`. Expected: only intended present
 - Commit: `index.html`
 - Commit: this plan
 
-- [ ] **Step 1: Commit the verified presentation**
+- [x] **Step 1: Commit the verified presentation**
 
 ```bash
 git add index.html docs/superpowers/plans/2026-07-16-email-aligned-inventory-presentation.md
 git commit -m "Align inventory presentation with notebook walkthrough"
 ```
 
-- [ ] **Step 2: Push `main`**
+- [x] **Step 2: Push `main`**
 
 Run `git push origin main`.
 
-- [ ] **Step 3: Verify deployment SHA**
+- [x] **Step 3: Verify deployment SHA**
 
 Expected: the latest GitHub Pages build reports the exact `git rev-parse HEAD` SHA and status `built`.
 
-- [ ] **Step 4: Verify the public artifact**
+- [x] **Step 4: Verify the public artifact**
 
 Compare the public HTML byte-for-byte with local `index.html`, then run the same WebKit checks against the public URL.
