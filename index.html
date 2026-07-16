@@ -492,32 +492,6 @@
           </table>
         </div>
 
-        <div class="callout warning">
-          <strong>How to describe realism accurately</strong>
-          <p>The values are an <em>ORSuite-compatible analogue</em> of the <code>ds2_lr=2_b=95_h=5_u04</code> dual-sourcing setting described by <a href="https://doi.org/10.1287/ijoc.2022.0136">B&ouml;ttcher, Asikis, and Fragkos (2023)</a>, not a direct reproduction of their experiment. Their <a href="https://github.com/INFORMSJoC/2022.0136/blob/2400e151fbebcfd814ee210a79b4e8b8240768aa/code/sourcing_models/recursion_input_files/ds2_lr%3D2_b%3D95_h%3D5_u04.in">archived instance</a> uses lead times 0 and 2; these were shifted to 1 and 3 because this ORSuite environment requires positive lead times.</p>
-        </div>
-
-        <div class="grid-2">
-          <div class="panel amber">
-            <h3>What the units mean</h3>
-            <p>Costs are normalized research units, not dollars. The regular supplier's zero means no <em>incremental premium</em> relative to the baseline, not that real supply is free.</p>
-          </div>
-          <div class="panel blue">
-            <h3>What not to claim</h3>
-            <p>The 0.95 critical-fractile ratio, <code>95 / (95 + 5)</code>, expresses the backlog-versus-holding tradeoff. It is not a guaranteed 95% service level.</p>
-          </div>
-        </div>
-
-        <div class="figure-pair">
-          <figure>
-            <img src="assets/notebook-parameters.png" alt="Notebook section explaining the benchmark parameter rationale">
-            <figcaption>The notebook labels the configuration as a literature-inspired analogue and explains the lead-time shift.</figcaption>
-          </figure>
-          <figure>
-            <img src="assets/notebook-config-output.png" alt="Notebook output listing the exact inventory benchmark configuration">
-            <figcaption>The executed configuration exposes every numerical setting used by the experiment.</figcaption>
-          </figure>
-        </div>
       </section>
 
       <section id="algorithms">
