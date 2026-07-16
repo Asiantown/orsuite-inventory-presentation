@@ -389,13 +389,13 @@
     <aside class="sidebar" aria-label="Page navigation">
       <div class="sidebar-label">Contents</div>
       <nav>
-        <a href="#environment">1. Environment</a>
-        <a href="#parameters">2. Parameters</a>
+        <a href="#environment">1. Problem</a>
+        <a href="#parameters">2. Scenario</a>
         <a href="#algorithms">3. Algorithms</a>
         <a href="#evaluation">4. Evaluation</a>
         <a href="#results">5. Results</a>
-        <a href="#limitations">6. Limitations</a>
-        <a href="#reproducibility">7. Reproducibility</a>
+        <a href="#limitations">6. Next steps</a>
+        <a href="#reproducibility">7. Notebook</a>
       </nav>
       <div class="sidebar-note">
         Single-product, dual-supplier inventory control. Lower cost is better throughout.
@@ -406,189 +406,132 @@
       <header class="hero">
         <div class="eyebrow">ORSuite &middot; Inventory control</div>
         <h1>Dual-Sourcing Inventory Benchmark</h1>
-        <p class="dek">A reproducible Gymnasium and Stable-Baselines3 comparison for a single-product inventory system with two suppliers, stochastic demand, and delayed replenishment.</p>
+        <p class="dek">How do PPO and DQN behave when one product can be ordered from a fast expensive supplier or a slower cheaper supplier before demand is known?</p>
         <div class="hero-meta">
-          <div><span>Scope</span><strong>One product &middot; Two suppliers</strong></div>
-          <div><span>Policies</span><strong>PPO &middot; DQN &middot; TBS reference</strong></div>
-          <div><span>Metric</span><strong>Mean cost per period</strong></div>
+          <div><span>System</span><strong>One product &middot; Two suppliers</strong></div>
+          <div><span>Comparison</span><strong>PPO &middot; DQN &middot; TBS reference</strong></div>
+          <div><span>Score</span><strong>Cost per period &middot; lower is better</strong></div>
         </div>
       </header>
 
       <section id="environment">
-        <div class="eyebrow">1 &middot; Environment</div>
-        <h2>The environment in plain English</h2>
-        <p class="section-intro">The agent manages one product and can replenish it from two suppliers. The fast supplier arrives sooner but costs more; the regular supplier is slower but cheaper. Customer demand is random, so every order trades off future shortages against excess inventory.</p>
+        <div class="eyebrow">1 &middot; Decision problem</div>
+        <h2>The inventory decision</h2>
+        <p class="section-intro">Each period, the policy sees current inventory and outstanding orders, then chooses how much to request from each supplier before random customer demand arrives.</p>
 
         <div class="flow" aria-label="Inventory decision process">
           <div class="flow-box">
             <strong>Observe</strong>
-            <p>Four outstanding-order pipeline positions plus current net inventory, represented as five integers.</p>
+            <p>Current net inventory and every order already moving through the two supply pipelines.</p>
           </div>
           <div class="flow-arrow" aria-hidden="true">&rarr;</div>
           <div class="flow-box">
-            <strong>Choose two orders</strong>
-            <p><code>[fast order, regular order]</code>, with each quantity from 0 through 4. There are 25 feasible decisions.</p>
+            <strong>Place two orders</strong>
+            <p><code>[fast, regular]</code>, with each quantity from 0 through 4. That gives 25 possible order pairs.</p>
           </div>
           <div class="flow-arrow" aria-hidden="true">&rarr;</div>
           <div class="flow-box">
-            <strong>Update and score</strong>
-            <p>Arrivals enter inventory, random demand occurs, pipelines shift, and ordering plus holding or backlog costs are charged.</p>
+            <strong>Resolve the period</strong>
+            <p>Deliveries arrive, demand is sampled, and the system pays ordering plus holding or backlog cost.</p>
           </div>
         </div>
 
-        <div class="grid-2">
-          <div class="panel">
-            <h3>What Gymnasium provides</h3>
-            <p>A standard environment interface: <code>reset()</code> starts an episode, <code>step(action)</code> advances one period, and action/observation spaces describe valid inputs and outputs.</p>
-          </div>
-          <div class="panel blue">
-            <h3>What reinforcement learning does</h3>
-            <p>It repeatedly interacts with that interface and learns a policy: a rule mapping the current inventory state to replenishment orders that seek high reward, meaning low cost here.</p>
-          </div>
-        </div>
-
-        <h3>The MDP pieces</h3>
+        <h3>Model at a glance</h3>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Piece</th><th>Meaning in this environment</th></tr></thead>
+            <thead><tr><th>Component</th><th>In this benchmark</th></tr></thead>
             <tbody>
-              <tr><td><strong>State</strong></td><td>Outstanding orders by pipeline position and encoded net inventory. The last value is offset by 1,000 so the Gymnasium observation remains nonnegative.</td></tr>
-              <tr><td><strong>Action</strong></td><td>Two order quantities: one for the fast supplier and one for the regular supplier.</td></tr>
-              <tr><td><strong>Randomness</strong></td><td>Independent integer customer demand from 0 to 4 units each period.</td></tr>
-              <tr><td><strong>Reward</strong></td><td>The negative of ordering, holding, and backlog cost. Maximizing reward therefore minimizes cost.</td></tr>
-              <tr><td><strong>Episode</strong></td><td>100 periods. The environment truncates at the horizon rather than declaring a terminal business state.</td></tr>
+              <tr><td><strong>State</strong></td><td>Four pipeline positions plus current net inventory.</td></tr>
+              <tr><td><strong>Action</strong></td><td>One order quantity for each supplier.</td></tr>
+              <tr><td><strong>Demand</strong></td><td>An independent integer from 0 through 4 each period.</td></tr>
+              <tr><td><strong>Objective</strong></td><td>Reward is negative total cost, so maximizing reward minimizes ordering, holding, and backlog cost over 100 periods.</td></tr>
             </tbody>
           </table>
         </div>
-
-        <h3>What happens in one <code>step()</code></h3>
-        <div class="step-list">
-          <div class="step"><div><strong>Validate the two order quantities.</strong><p>Each must be an integer from 0 through 4.</p></div></div>
-          <div class="step"><div><strong>Receive orders whose lead times have elapsed.</strong><p>The fast and regular pipelines carry prior decisions forward.</p></div></div>
-          <div class="step"><div><strong>Sample customer demand from the environment RNG.</strong><p>Seeded randomness makes evaluation scenarios repeatable.</p></div></div>
-          <div class="step"><div><strong>Update net inventory and outstanding orders.</strong><p>Unfilled demand becomes negative inventory, or backlog.</p></div></div>
-          <div class="step"><div><strong>Compute cost and return the Gymnasium five-tuple.</strong><p><code>(observation, reward, terminated, truncated, info)</code>.</p></div></div>
-        </div>
+        <div class="callout"><p><strong>Gymnasium status:</strong> the migrated environment uses the current reset/step API, supports seeded demand, and passes <code>check_env</code>.</p></div>
       </section>
 
       <section id="parameters">
-        <div class="eyebrow">2 &middot; Simulation parameters</div>
-        <h2>Specific simulation parameters</h2>
-        <p class="section-intro">These settings create a demanding but interpretable dual-sourcing problem: backlogs are expensive, the faster supplier has a premium, and the slow supplier requires planning several periods ahead.</p>
+        <div class="eyebrow">2 &middot; Scenario</div>
+        <h2>The benchmark scenario</h2>
+        <p class="section-intro">The faster source costs more, the regular source requires planning ahead, and shortages are deliberately much more expensive than extra stock.</p>
         <div class="table-wrap">
           <table>
             <thead><tr><th>Parameter</th><th>Value</th><th>Interpretation</th></tr></thead>
             <tbody>
               <tr><td>Lead times</td><td><code>[1, 3]</code></td><td>Fast supply arrives after 1 period; regular supply after 3.</td></tr>
-              <tr><td>Supplier costs</td><td><code>[10, 0]</code></td><td>Fast orders pay a 10-unit premium; regular supply is the zero incremental-cost reference.</td></tr>
+              <tr><td>Incremental order costs</td><td><code>[10, 0]</code></td><td>The fast source carries a 10-unit premium.</td></tr>
               <tr><td>Holding cost</td><td><code>5</code></td><td>Cost per positive inventory unit per period.</td></tr>
               <tr><td>Backlog cost</td><td><code>95</code></td><td>Cost per unfilled demand unit per period.</td></tr>
               <tr><td>Demand</td><td><code>Uniform{0,1,2,3,4}</code></td><td>Mean demand is 2 units per period.</td></tr>
               <tr><td>Maximum order</td><td><code>4</code> per supplier</td><td>Each period's action is one of 25 order pairs.</td></tr>
-              <tr><td>Inventory bound</td><td><code>&plusmn;1000</code></td><td>Wide encoded bound used by the existing ORSuite environment.</td></tr>
               <tr><td>Episode length</td><td><code>100</code></td><td>One evaluation episode represents 100 inventory periods.</td></tr>
               <tr><td>Initial state</td><td>Empty pipeline, zero net inventory</td><td>No inventory or outstanding orders at reset.</td></tr>
             </tbody>
           </table>
         </div>
-
+        <p><small>Adapted from the <a href="https://github.com/INFORMSJoC/2022.0136/blob/2400e151fbebcfd814ee210a79b4e8b8240768aa/code/sourcing_models/recursion_input_files/ds2_lr%3D2_b%3D95_h%3D5_u04.in">public dual-sourcing instance</a> of <a href="https://doi.org/10.1287/ijoc.2022.0136">B&ouml;ttcher, Asikis, and Fragkos (2023)</a>. Its 0/2-period lead times become 1/3 here because the current ORSuite environment requires positive lead times.</small></p>
       </section>
 
       <section id="algorithms">
         <div class="eyebrow">3 &middot; Learning algorithms</div>
-        <h2>Two Stable-Baselines3 baselines</h2>
-        <p class="section-intro">PPO and DQN use different learning methods, but both can choose from exactly the same 25 inventory decisions. The comparison is an integration benchmark, not a tuned contest or universal ranking.</p>
+        <h2>Two ways to learn the ordering policy</h2>
+        <p class="section-intro">PPO and DQN learn differently, but both keep access to every one of the 25 feasible order pairs.</p>
 
         <div class="grid-2">
           <div class="panel blue">
             <h3>PPO</h3>
-            <p><strong>Proximal Policy Optimization</strong> is an on-policy policy-gradient method. It directly supports ORSuite's native <code>MultiDiscrete([5, 5])</code> action space.</p>
-            <ul>
-              <li><code>MlpPolicy</code>, <code>gamma=0.99</code></li>
-              <li><code>n_steps=512</code>, <code>batch_size=64</code></li>
-              <li><code>n_epochs=10</code>, <code>learning_rate=3e-4</code></li>
-            </ul>
+            <p><strong>Proximal Policy Optimization</strong> learns a policy directly and can use the native <code>MultiDiscrete([5, 5])</code> action.</p>
+            <p><strong>Action:</strong> <code>[fast order, regular order]</code></p>
           </div>
           <div class="panel red">
             <h3>DQN</h3>
-            <p><strong>Deep Q-Network</strong> learns action values off-policy. SB3 DQN requires a single <code>Discrete</code> action, so a reversible wrapper maps integers 0&ndash;24 to the same 25 order pairs.</p>
-            <ul>
-              <li><code>MlpPolicy</code>, <code>gamma=0.99</code>, <code>learning_rate=1e-4</code></li>
-              <li><code>learning_starts=1000</code>, <code>buffer_size=50000</code></li>
-              <li><code>batch_size=64</code>, <code>train_freq=4</code></li>
-              <li><code>gradient_steps=1</code>, <code>target_update_interval=10000</code></li>
-              <li><code>exploration_fraction=0.3</code></li>
-            </ul>
+            <p><strong>Deep Q-Network</strong> learns a value for each action. A reversible wrapper maps integers 0&ndash;24 to the same order pairs.</p>
+            <p><strong>Decode:</strong> <code>a &rarr; [a // 5, a % 5]</code></p>
           </div>
         </div>
 
         <div class="callout blue">
-          <strong>Fair action access</strong>
-          <p>For DQN, discrete action <code>a</code> decodes to <code>[a // 5, a % 5]</code>. This is a one-to-one mapping, so DQN does not lose any feasible inventory decision. The two algorithms differ only in action representation and learning procedure.</p>
+          <strong>Same feasible decisions</strong>
+          <p>The wrapper is one-to-one: action 0 maps to <code>[0, 0]</code> and action 24 maps to <code>[4, 4]</code>. DQN changes the representation, not the inventory choices.</p>
         </div>
-
-        <h3>Reward scaling</h3>
-        <p>Training divides the negative cost reward by 100 to improve numerical conditioning. Evaluation uses the original environment with <strong>unscaled costs</strong>, so the plot and CSV remain directly interpretable.</p>
-
-        <div class="figure-stack">
-          <figure>
-            <img src="assets/notebook-experiment-design.png" alt="Notebook explanation of PPO, DQN, action fairness, and evaluation design">
-            <figcaption>The notebook states the action-space equivalence and separates training reward scaling from evaluation cost.</figcaption>
-          </figure>
-          <figure>
-            <a href="assets/notebook-experiment-settings.png" aria-label="Open the full experiment settings notebook screenshot">
-              <div class="notebook-crop">
-                <img src="assets/notebook-experiment-settings.png" alt="Notebook code and output showing the PPO and DQN experiment settings">
-              </div>
-            </a>
-            <figcaption>The algorithm settings, seeds, checkpoint schedule, and run controls are explicit. The linked full screenshot also includes the saved run output.</figcaption>
-          </figure>
-        </div>
+        <p>Training rewards are divided by 100 for numerical conditioning; evaluation always returns to the original unscaled inventory costs.</p>
       </section>
 
       <section id="evaluation">
         <div class="eyebrow">4 &middot; Evaluation design</div>
-        <h2>How performance was measured</h2>
-        <p class="section-intro">The evaluation separates training randomness from a fixed held-out test set. At every checkpoint, each policy sees the same demand scenarios and is scored using positive, unscaled cost per period.</p>
+        <h2>A controlled comparison</h2>
+        <p class="section-intro">Training varies across seeds, while checkpoint evaluation holds the demand scenarios and scoring rule fixed.</p>
 
         <div class="metric-strip">
           <div class="metric"><span>Training seeds</span><strong>3</strong><small>0, 1, and 2</small></div>
-          <div class="metric"><span>Requested training</span><strong>50k</strong><small>timesteps per algorithm and seed</small></div>
-          <div class="metric"><span>Held-out evaluation</span><strong>20</strong><small>100-period episodes per seed and checkpoint</small></div>
+          <div class="metric"><span>Checkpoints</span><strong>5</strong><small>roughly every 10k timesteps</small></div>
+          <div class="metric"><span>Held-out episodes</span><strong>20</strong><small>100 periods each</small></div>
         </div>
 
         <div class="table-wrap">
           <table>
             <thead><tr><th>Control</th><th>Implementation</th><th>Why it matters</th></tr></thead>
             <tbody>
-              <tr><td>Training seeds</td><td><code>0, 1, 2</code></td><td>Shows sensitivity to independent model initialization and experience.</td></tr>
-              <tr><td>Checkpoint schedule</td><td>Requested every 10,000 timesteps</td><td>Measures learning during training rather than only the final model.</td></tr>
-              <tr><td>Evaluation seed</td><td><code>100000</code></td><td>Produces fixed held-out demand trajectories shared by algorithms.</td></tr>
-              <tr><td>Episodes per checkpoint</td><td>20 per training seed</td><td>Averages over multiple stochastic demand paths.</td></tr>
-              <tr><td>Evaluation policy</td><td>Deterministic action selection</td><td>Removes action-sampling noise from the comparison.</td></tr>
-              <tr><td>Metric</td><td>Mean original cost per period</td><td>Comparable to the heuristic and understandable as an inventory objective.</td></tr>
+              <tr><td>Training</td><td>50,000 requested timesteps per algorithm and seed</td><td>One uninterrupted learning run per seed.</td></tr>
+              <tr><td>Held-out demand</td><td>The same seeded scenarios at every checkpoint</td><td>Changes in the curve come from the learned policy, not a changing test set.</td></tr>
+              <tr><td>Action selection</td><td>Deterministic during evaluation</td><td>Removes extra sampling noise from the comparison.</td></tr>
+              <tr><td>Metric</td><td>Mean unscaled cost per period</td><td>Lower is better and remains interpretable in the original model units.</td></tr>
             </tbody>
           </table>
         </div>
 
-        <div class="callout warning">
-          <strong>Why PPO's x-values are not exact multiples of 10,000</strong>
-          <p>PPO trains in complete 512-step rollouts. Its actual checkpoints are 10,240; 20,480; 30,208; 40,448; and 50,176 timesteps. The plot reports those exact SB3 counters rather than relabeling them as rounded targets.</p>
-        </div>
-
-        <h3>Adapted TBS reference</h3>
-        <p>A simple tailored-base-surge policy provides an inventory-specific reference: a regular base order of <strong>1</strong> and a fast order-up-to target of <strong>7</strong>. It was selected on separate calibration scenarios using seed 1,100,000, then evaluated on the same held-out scenarios as PPO and DQN.</p>
-        <p>This is an <strong>adapted reference baseline</strong>, not a reproduction of a published paper result. It also encodes inventory structure directly, while the neural baselines learn from generic observations, so its comparison is informative but not a claim of identical prior knowledge.</p>
+        <div class="callout warning"><p><strong>Inventory reference:</strong> a tailored-base-surge policy with regular base order 1 and fast order-up-to target 7 was calibrated on a separate demand stream, then scored on the same held-out scenarios. It is a structured heuristic, not another ML model.</p></div>
       </section>
 
       <section id="results">
         <div class="eyebrow">5 &middot; Results</div>
-        <h2>Training timesteps versus performance</h2>
-        <p class="section-intro">The plot uses actual SB3 timesteps on the x-axis and held-out mean cost per period on a logarithmic y-axis. Lower values are better. Shaded bands show variation across the three training seeds.</p>
+        <h2>What happened during training</h2>
+        <p class="section-intro">The x-axis uses actual Stable-Baselines3 timesteps. The logarithmic y-axis shows held-out cost per period, and the shaded bands show variation across the three training seeds.</p>
 
         <figure class="plot">
           <img src="assets/inventory-learning-curves.svg" alt="Learning curves comparing PPO, DQN, and an adapted TBS reference on the inventory benchmark">
-          <figcaption>Saved experiment figure. PPO is blue, DQN is red, and the dashed green line is the adapted TBS reference.</figcaption>
+          <figcaption>PPO is blue, DQN is red, and the dashed green line is the adapted TBS reference. Lower is better.</figcaption>
         </figure>
 
         <div class="metric-strip">
@@ -597,101 +540,52 @@
           <div class="metric"><span>TBS reference</span><strong>33.810</strong><small>cost/period</small></div>
         </div>
 
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Checkpoint</th><th class="numeric">PPO cost/period</th><th class="numeric">DQN cost/period</th></tr></thead>
-            <tbody>
-              <tr><td>~10k timesteps</td><td class="numeric">2,138.702</td><td class="numeric">1,001.716</td></tr>
-              <tr><td>~20k timesteps</td><td class="numeric">7,516.058</td><td class="numeric">174.993</td></tr>
-              <tr><td>~30k timesteps</td><td class="numeric">5,164.829</td><td class="numeric">112.031</td></tr>
-              <tr><td>~40k timesteps</td><td class="numeric">1,804.643</td><td class="numeric">371.508</td></tr>
-              <tr><td>~50k timesteps</td><td class="numeric"><strong>216.529</strong></td><td class="numeric"><strong>420.887</strong></td></tr>
-            </tbody>
-          </table>
-        </div>
-
         <div class="callout">
-          <strong>Honest interpretation</strong>
-          <p>PPO has the lower final neural-policy cost in this run, but DQN is much better at the middle checkpoints and reaches its best value near 30,000 timesteps. Both show substantial instability across seeds, and the adapted TBS heuristic remains clearly stronger. These results verify the training and evaluation pipeline; they do not establish that PPO is universally better than DQN or that either model is tuned.</p>
-        </div>
-
-        <figure>
-          <img src="assets/notebook-learning-curves.png" alt="Executed notebook cell displaying the inventory learning curves">
-          <figcaption>The learning curve is generated directly inside the executed notebook and also saved as SVG.</figcaption>
-        </figure>
-        <div class="figure-pair">
-          <figure>
-            <img src="assets/notebook-results.png" alt="Notebook explanation of the benchmark results">
-            <figcaption>The notebook tells the reader how to interpret the plot without overstating the evidence.</figcaption>
-          </figure>
-          <figure>
-            <img src="assets/notebook-results-output.png" alt="Notebook result table and artifact paths">
-            <figcaption>The executed notebook prints the final summary and the saved CSV/SVG artifact locations.</figcaption>
-          </figure>
+          <strong>Takeaway</strong>
+          <p>DQN improves sooner and reaches its best mean cost, 112.031, near 30k steps. PPO finishes lower than DQN at the final checkpoint, but both curves are non-monotonic and seed-sensitive. The structured TBS reference remains much lower at 33.810.</p>
         </div>
       </section>
 
       <section id="limitations">
         <div class="eyebrow">6 &middot; Interpretation</div>
-        <h2>Limitations and research directions</h2>
-        <p class="section-intro">This benchmark verifies a reproducible Gymnasium-to-SB3 workflow under one controlled inventory configuration. It is not a definitive algorithm ranking or a calibrated deployment study.</p>
+        <h2>What this run shows, and what comes next</h2>
+        <p class="section-intro">This is a compact integration benchmark under one controlled inventory scenario, not a final ranking of PPO and DQN.</p>
 
         <div class="grid-2">
           <div class="panel">
-            <h3>What the experiment establishes</h3>
+            <h3>What this run establishes</h3>
             <ul>
               <li>The migrated environment passes Gymnasium validation.</li>
               <li>PPO and DQN can train against the same feasible inventory decisions.</li>
-              <li>Held-out evaluation and checkpoint plotting run reproducibly.</li>
-              <li>An inventory-specific reference exposes the gap to structured policies.</li>
+              <li>Held-out evaluation produces reproducible learning curves and saved artifacts.</li>
             </ul>
           </div>
           <div class="panel amber">
-            <h3>What remains uncertain</h3>
+            <h3>What I would test next</h3>
             <ul>
-              <li>Three training seeds are not enough for a definitive statistical comparison.</li>
-              <li>The algorithms were not independently tuned or trained to convergence.</li>
-              <li>Demand and costs are synthetic research units, not company data.</li>
-              <li>The setting contains one product and two suppliers only.</li>
+              <li>Use more seeds and longer training budgets.</li>
+              <li>Tune PPO and DQN separately under the same evaluation rules.</li>
+              <li>Test a more compact observation representation and stronger inventory-specific policies.</li>
             </ul>
           </div>
         </div>
-
-        <h3>Potential next experiments</h3>
-        <ol>
-          <li>Increase the training budget and number of independent seeds.</li>
-          <li>Tune PPO and DQN separately under equal evaluation rules.</li>
-          <li>Test normalized observations to reduce the 2,021-dimensional one-hot input.</li>
-          <li>Compare additional inventory-specific heuristics and policy architectures.</li>
-          <li>Evaluate whether zero-period lead times should be supported for closer literature replication.</li>
-        </ol>
-
-        <figure>
-          <img src="assets/notebook-limitations.png" alt="Notebook limitations and reproducibility notes">
-          <figcaption>The notebook records scope limitations and separates integration evidence from stronger algorithmic claims.</figcaption>
-        </figure>
+        <p><small>Current scope: one product, two suppliers, synthetic demand, normalized costs, three training seeds, and no extensive hyperparameter search.</small></p>
       </section>
 
       <section id="reproducibility">
-        <div class="eyebrow">7 &middot; Reproducibility</div>
-        <h2>Run the benchmark from a clean environment</h2>
-        <p class="section-intro">A pinned dependency file, fast smoke mode, saved CSV/SVG outputs, and a provenance manifest make the experiment inspectable without retraining during a presentation.</p>
+        <div class="eyebrow">7 &middot; Notebook</div>
+        <h2>From environment check to saved results</h2>
+        <p class="section-intro">The notebook is the reviewable walkthrough: it can load the committed results immediately or regenerate the experiment from a pinned environment.</p>
 
-        <pre><code>conda create -n orsuite-inventory python=3.11 pip
-conda activate orsuite-inventory
-python -m pip install -r examples/inventory_algorithm_comparison_requirements.txt
-python examples/inventory_algorithm_comparison.py --smoke-test
-jupyter lab examples/inventory_algorithm_comparison.ipynb</code></pre>
+        <div class="flow" aria-label="Notebook workflow">
+          <div class="flow-box"><strong>Set up and validate</strong><p>Install pinned dependencies, build the scenario, and run Gymnasium's environment check.</p></div>
+          <div class="flow-arrow" aria-hidden="true">&rarr;</div>
+          <div class="flow-box"><strong>Train and evaluate</strong><p>Run PPO and DQN checkpoints, then score them with the held-out demand stream.</p></div>
+          <div class="flow-arrow" aria-hidden="true">&rarr;</div>
+          <div class="flow-box"><strong>Inspect artifacts</strong><p>Review the raw CSV, summary CSV, learning-curve SVG, and provenance manifest.</p></div>
+        </div>
 
-        <p>The manifest records exact runtime versions and SHA-256 hashes for the implementation and saved artifacts. Full regeneration is available by setting <code>RUN_EXPERIMENT = True</code> in the notebook.</p>
-
-        <figure>
-          <img src="assets/notebook-setup.png" alt="Notebook setup instructions and environment validation">
-          <figcaption>The executable notebook includes setup, imports, environment validation, saved-result loading, and full-regeneration controls.</figcaption>
-        </figure>
-
-        <h3>Benchmark source</h3>
-        <p>The configuration is an ORSuite-compatible analogue of the dual-sourcing instance from <a href="https://doi.org/10.1287/ijoc.2022.0136">B&ouml;ttcher, Asikis, and Fragkos (2023)</a>. The <a href="https://github.com/INFORMSJoC/2022.0136/blob/2400e151fbebcfd814ee210a79b4e8b8240768aa/code/sourcing_models/recursion_input_files/ds2_lr%3D2_b%3D95_h%3D5_u04.in">archived parameter instance</a> is publicly available.</p>
+        <div class="callout"><p><strong>Two run modes:</strong> smoke mode checks the full workflow quickly; full mode regenerates all three-seed results. The manifest records package versions and SHA-256 hashes.</p></div>
 
         <div class="footer">
           All numerical results shown above are loaded from the saved experiment summary generated by the benchmark workflow.
