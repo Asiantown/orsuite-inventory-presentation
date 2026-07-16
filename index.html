@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>ORSuite Dual-Sourcing Inventory Benchmark</title>
+  <style>
+    :root {
+      --ink: #18211d;
+      --muted: #5c6862;
+      --line: #d8dfdb;
+      --soft: #f4f7f5;
+      --paper: #ffffff;
+      --green: #176943;
+      --green-soft: #e7f2ec;
+      --blue: #315f8c;
+      --red: #9f3e3e;
+      --amber: #8a5a16;
+      --amber-soft: #fff5df;
+      --max: 1160px;
+      --sidebar: 236px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 16px;
+      line-height: 1.62;
+      letter-spacing: 0;
+    }
+
+    a { color: var(--blue); text-underline-offset: 3px; }
+    a:hover { color: var(--green); }
+    code, .mono {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 0.92em;
+    }
+    code {
+      padding: 0.1rem 0.3rem;
+      border: 1px solid #dfe5e1;
+      border-radius: 4px;
+      background: #f7f9f8;
+    }
+    pre {
+      margin: 1rem 0 1.5rem;
+      padding: 1rem;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #f7f9f8;
+      color: #2f3a34;
+      line-height: 1.5;
+    }
+    pre code { padding: 0; border: 0; background: transparent; }
+    h1, h2, h3, h4 { line-height: 1.23; letter-spacing: 0; }
+    h1 { margin: 0 0 0.6rem; font-size: clamp(2rem, 5vw, 3.65rem); font-weight: 720; }
+    h2 { margin: 0 0 1.3rem; font-size: 1.75rem; }
+    h3 { margin: 1.7rem 0 0.7rem; font-size: 1.13rem; }
+    h4 { margin: 1rem 0 0.35rem; font-size: 1rem; }
+    p { margin: 0.55rem 0 1rem; }
+    ul, ol { margin: 0.55rem 0 1rem; padding-left: 1.3rem; }
+    li + li { margin-top: 0.38rem; }
+
+    .topline {
+      border-bottom: 1px solid #c6d3cc;
+      background: var(--green-soft);
+      color: #254b38;
+      font-size: 0.88rem;
+    }
+    .topline-inner {
+      width: min(var(--max), calc(100% - 36px));
+      margin: 0 auto;
+      display: flex;
+      gap: 1rem 2rem;
+      justify-content: space-between;
+      padding: 0.58rem 0;
+    }
+    .topline strong { color: var(--green); }
+
+    .shell {
+      width: min(var(--max), calc(100% - 36px));
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: var(--sidebar) minmax(0, 1fr);
+      gap: 52px;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      align-self: start;
+      height: 100vh;
+      padding: 34px 0 28px;
+      border-right: 1px solid var(--line);
+    }
+    .sidebar-label {
+      margin-bottom: 0.9rem;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 750;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .sidebar nav { display: grid; gap: 0.15rem; padding-right: 30px; }
+    .sidebar nav a {
+      display: block;
+      padding: 0.38rem 0;
+      color: #536059;
+      font-size: 0.88rem;
+      text-decoration: none;
+    }
+    .sidebar nav a:hover { color: var(--green); }
+    .sidebar-note {
+      margin: 1.6rem 30px 0 0;
+      padding-top: 1rem;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.5;
+    }
+
+    main { min-width: 0; padding-bottom: 72px; }
+    .hero {
+      min-height: 510px;
+      padding: 76px 0 58px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      border-bottom: 1px solid var(--line);
+    }
+    .eyebrow {
+      margin-bottom: 1rem;
+      color: var(--green);
+      font-size: 0.78rem;
+      font-weight: 750;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .dek {
+      max-width: 760px;
+      margin: 0;
+      color: #46534c;
+      font-size: 1.22rem;
+      line-height: 1.5;
+    }
+    .hero-meta {
+      margin-top: 2.3rem;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+    .hero-meta > div { padding: 1rem 1rem 1rem 0; }
+    .hero-meta > div + div { padding-left: 1rem; border-left: 1px solid var(--line); }
+    .hero-meta span { display: block; color: var(--muted); font-size: 0.76rem; text-transform: uppercase; }
+    .hero-meta strong { display: block; margin-top: 0.18rem; font-size: 0.95rem; }
+
+    section {
+      scroll-margin-top: 18px;
+      padding: 58px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    section:last-child { border-bottom: 0; }
+    .section-intro { max-width: 750px; color: #46534c; font-size: 1.05rem; }
+
+    .checklist {
+      margin-top: 1.8rem;
+      border-top: 1px solid var(--line);
+    }
+    .check-row {
+      display: grid;
+      grid-template-columns: 38px minmax(0, 1fr) auto;
+      gap: 0.9rem;
+      align-items: start;
+      padding: 1.05rem 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .check-num {
+      color: var(--green);
+      font-weight: 750;
+      font-variant-numeric: tabular-nums;
+    }
+    .check-row strong { display: block; }
+    .check-row p { margin: 0.15rem 0 0; color: var(--muted); font-size: 0.9rem; }
+    .status {
+      padding: 0.14rem 0.45rem;
+      border: 1px solid #b9d3c4;
+      border-radius: 4px;
+      background: var(--green-soft);
+      color: var(--green);
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .callout {
+      margin: 1.6rem 0;
+      padding: 1rem 1.15rem;
+      border-left: 4px solid var(--green);
+      background: var(--soft);
+    }
+    .callout p:last-child { margin-bottom: 0; }
+    .callout.warning { border-left-color: var(--amber); background: var(--amber-soft); }
+    .callout.blue { border-left-color: var(--blue); }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 26px;
+      margin-top: 1.5rem;
+    }
+    .panel {
+      padding: 1.15rem 0;
+      border-top: 3px solid var(--green);
+      border-bottom: 1px solid var(--line);
+    }
+    .panel.blue { border-top-color: var(--blue); }
+    .panel.red { border-top-color: var(--red); }
+    .panel.amber { border-top-color: var(--amber); }
+    .panel h3 { margin-top: 0; }
+
+    .flow {
+      display: grid;
+      grid-template-columns: 1fr 44px 1.25fr 44px 1fr;
+      align-items: stretch;
+      margin: 2rem 0;
+    }
+    .flow-box {
+      min-height: 136px;
+      padding: 1rem;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--soft);
+    }
+    .flow-box strong { display: block; margin-bottom: 0.35rem; color: var(--green); }
+    .flow-box p { margin: 0; color: var(--muted); font-size: 0.88rem; }
+    .flow-arrow {
+      display: grid;
+      place-items: center;
+      color: var(--green);
+      font-size: 1.6rem;
+    }
+
+    .table-wrap { margin: 1.4rem 0; overflow-x: auto; border-top: 1px solid var(--line); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td { padding: 0.78rem 0.7rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { background: #f7f9f8; color: #3f4a44; font-size: 0.76rem; text-transform: uppercase; }
+    td:first-child, th:first-child { padding-left: 0; }
+    th:first-child { padding-left: 0.7rem; }
+    .numeric { text-align: right; font-variant-numeric: tabular-nums; }
+
+    figure { margin: 2rem 0 0; }
+    figure img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border: 1px solid #cfd8d3;
+      border-radius: 6px;
+      background: white;
+    }
+    .notebook-crop {
+      max-height: 760px;
+      overflow: hidden;
+      border: 1px solid #cfd8d3;
+      border-radius: 6px;
+      background: white;
+    }
+    .notebook-crop img {
+      border: 0;
+      border-radius: 0;
+    }
+    figcaption { margin-top: 0.65rem; color: var(--muted); font-size: 0.8rem; }
+    .figure-pair {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+      align-items: start;
+    }
+    .figure-stack { display: grid; gap: 20px; }
+    .plot { max-width: 820px; margin-left: auto; margin-right: auto; }
+
+    .step-list { counter-reset: steps; margin: 1.5rem 0; }
+    .step {
+      counter-increment: steps;
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr);
+      gap: 0.75rem;
+      padding: 0.85rem 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .step::before {
+      content: counter(steps, decimal-leading-zero);
+      color: var(--green);
+      font-weight: 750;
+      font-variant-numeric: tabular-nums;
+    }
+    .step strong { display: block; }
+    .step p { margin: 0.15rem 0 0; color: var(--muted); font-size: 0.9rem; }
+
+    .metric-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      margin: 1.5rem 0;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+    .metric { padding: 1rem; }
+    .metric:first-child { padding-left: 0; }
+    .metric + .metric { border-left: 1px solid var(--line); }
+    .metric span { display: block; color: var(--muted); font-size: 0.74rem; text-transform: uppercase; }
+    .metric strong { display: block; margin-top: 0.15rem; font-size: 1.55rem; font-variant-numeric: tabular-nums; }
+    .metric small { color: var(--muted); }
+
+    .timeline { margin: 1.5rem 0; border-left: 2px solid var(--line); }
+    .timeline-item { position: relative; padding: 0 0 1.25rem 1.3rem; }
+    .timeline-item::before {
+      content: "";
+      position: absolute;
+      left: -6px;
+      top: 0.4rem;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+    .timeline-item time { color: var(--green); font-size: 0.78rem; font-weight: 750; }
+    .timeline-item strong { display: block; }
+    .timeline-item p { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.9rem; }
+
+    details { border-bottom: 1px solid var(--line); }
+    summary { cursor: pointer; padding: 0.9rem 2rem 0.9rem 0; font-weight: 650; }
+    details p { margin: 0 0 1rem; color: #46534c; }
+
+    .path {
+      display: block;
+      margin-top: 0.55rem;
+      padding: 0.65rem;
+      overflow-wrap: anywhere;
+      border: 1px solid var(--line);
+      background: var(--soft);
+      color: #3d4943;
+      font-size: 0.78rem;
+    }
+    .footer { padding: 38px 0 0; color: var(--muted); font-size: 0.82rem; }
+
+    @media (max-width: 900px) {
+      .shell { display: block; }
+      .sidebar { position: static; height: auto; padding: 18px 0; border-right: 0; border-bottom: 1px solid var(--line); }
+      .sidebar nav { display: flex; gap: 0.3rem 1rem; overflow-x: auto; padding-right: 0; white-space: nowrap; }
+      .sidebar-note, .sidebar-label { display: none; }
+      .hero { min-height: 430px; padding-top: 52px; }
+      .flow { grid-template-columns: 1fr; gap: 10px; }
+      .flow-arrow { min-height: 26px; transform: rotate(90deg); }
+    }
+
+    @media (max-width: 680px) {
+      body { font-size: 15px; }
+      .topline-inner { display: block; }
+      .topline-inner span { display: block; }
+      .shell, .topline-inner { width: min(100% - 26px, var(--max)); }
+      h1 { font-size: 2.35rem; }
+      h2 { font-size: 1.5rem; }
+      .hero-meta, .grid-2, .figure-pair, .metric-strip { grid-template-columns: 1fr; }
+      .hero-meta > div + div, .metric + .metric { padding-left: 0; border-left: 0; border-top: 1px solid var(--line); }
+      .metric { padding-left: 0; }
+      .check-row { grid-template-columns: 28px minmax(0, 1fr); }
+      .check-row .status { grid-column: 2; justify-self: start; }
+      section { padding: 44px 0; }
+    }
+
+    @media print {
+      .sidebar, .topline { display: none; }
+      .shell { display: block; width: 100%; }
+      main { padding: 0; }
+      .hero { min-height: 0; padding: 0 0 24px; }
+      section { padding: 28px 0; break-inside: avoid; }
+      figure { break-inside: avoid; }
+      details p { display: block; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" aria-label="Page navigation">
+      <div class="sidebar-label">Contents</div>
+      <nav>
+        <a href="#environment">1. Environment</a>
+        <a href="#parameters">2. Parameters</a>
+        <a href="#algorithms">3. Algorithms</a>
+        <a href="#evaluation">4. Evaluation</a>
+        <a href="#results">5. Results</a>
+        <a href="#limitations">6. Limitations</a>
+        <a href="#reproducibility">7. Reproducibility</a>
+      </nav>
+      <div class="sidebar-note">
+        Single-product, dual-supplier inventory control. Lower cost is better throughout.
+      </div>
+    </aside>
+
+    <main>
+      <header class="hero">
+        <div class="eyebrow">ORSuite &middot; Inventory control</div>
+        <h1>Dual-Sourcing Inventory Benchmark</h1>
+        <p class="dek">A reproducible Gymnasium and Stable-Baselines3 comparison for a single-product inventory system with two suppliers, stochastic demand, and delayed replenishment.</p>
+        <div class="hero-meta">
+          <div><span>Scope</span><strong>One product &middot; Two suppliers</strong></div>
+          <div><span>Policies</span><strong>PPO &middot; DQN &middot; TBS reference</strong></div>
+          <div><span>Metric</span><strong>Mean cost per period</strong></div>
+        </div>
+      </header>
+
+      <section id="environment">
+        <div class="eyebrow">1 &middot; Environment</div>
+        <h2>The environment in plain English</h2>
+        <p class="section-intro">The agent manages one product and can replenish it from two suppliers. The fast supplier arrives sooner but costs more; the regular supplier is slower but cheaper. Customer demand is random, so every order trades off future shortages against excess inventory.</p>
+
+        <div class="flow" aria-label="Inventory decision process">
+          <div class="flow-box">
+            <strong>Observe</strong>
+            <p>Four outstanding-order pipeline positions plus current net inventory, represented as five integers.</p>
+          </div>
+          <div class="flow-arrow" aria-hidden="true">&rarr;</div>
+          <div class="flow-box">
+            <strong>Choose two orders</strong>
+            <p><code>[fast order, regular order]</code>, with each quantity from 0 through 4. There are 25 feasible decisions.</p>
+          </div>
+          <div class="flow-arrow" aria-hidden="true">&rarr;</div>
+          <div class="flow-box">
+            <strong>Update and score</strong>
+            <p>Arrivals enter inventory, random demand occurs, pipelines shift, and ordering plus holding or backlog costs are charged.</p>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="panel">
+            <h3>What Gymnasium provides</h3>
+            <p>A standard environment interface: <code>reset()</code> starts an episode, <code>step(action)</code> advances one period, and action/observation spaces describe valid inputs and outputs.</p>
+          </div>
+          <div class="panel blue">
+            <h3>What reinforcement learning does</h3>
+            <p>It repeatedly interacts with that interface and learns a policy: a rule mapping the current inventory state to replenishment orders that seek high reward, meaning low cost here.</p>
+          </div>
+        </div>
+
+        <h3>The MDP pieces</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Piece</th><th>Meaning in this environment</th></tr></thead>
+            <tbody>
+              <tr><td><strong>State</strong></td><td>Outstanding orders by pipeline position and encoded net inventory. The last value is offset by 1,000 so the Gymnasium observation remains nonnegative.</td></tr>
+              <tr><td><strong>Action</strong></td><td>Two order quantities: one for the fast supplier and one for the regular supplier.</td></tr>
+              <tr><td><strong>Randomness</strong></td><td>Independent integer customer demand from 0 to 4 units each period.</td></tr>
+              <tr><td><strong>Reward</strong></td><td>The negative of ordering, holding, and backlog cost. Maximizing reward therefore minimizes cost.</td></tr>
+              <tr><td><strong>Episode</strong></td><td>100 periods. The environment truncates at the horizon rather than declaring a terminal business state.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>What happens in one <code>step()</code></h3>
+        <div class="step-list">
+          <div class="step"><div><strong>Validate the two order quantities.</strong><p>Each must be an integer from 0 through 4.</p></div></div>
+          <div class="step"><div><strong>Receive orders whose lead times have elapsed.</strong><p>The fast and regular pipelines carry prior decisions forward.</p></div></div>
+          <div class="step"><div><strong>Sample customer demand from the environment RNG.</strong><p>Seeded randomness makes evaluation scenarios repeatable.</p></div></div>
+          <div class="step"><div><strong>Update net inventory and outstanding orders.</strong><p>Unfilled demand becomes negative inventory, or backlog.</p></div></div>
+          <div class="step"><div><strong>Compute cost and return the Gymnasium five-tuple.</strong><p><code>(observation, reward, terminated, truncated, info)</code>.</p></div></div>
+        </div>
+      </section>
+
+      <section id="parameters">
+        <div class="eyebrow">2 &middot; Simulation parameters</div>
+        <h2>Specific simulation parameters</h2>
+        <p class="section-intro">These settings create a demanding but interpretable dual-sourcing problem: backlogs are expensive, the faster supplier has a premium, and the slow supplier requires planning several periods ahead.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Parameter</th><th>Value</th><th>Interpretation</th></tr></thead>
+            <tbody>
+              <tr><td>Lead times</td><td><code>[1, 3]</code></td><td>Fast supply arrives after 1 period; regular supply after 3.</td></tr>
+              <tr><td>Supplier costs</td><td><code>[10, 0]</code></td><td>Fast orders pay a 10-unit premium; regular supply is the zero incremental-cost reference.</td></tr>
+              <tr><td>Holding cost</td><td><code>5</code></td><td>Cost per positive inventory unit per period.</td></tr>
+              <tr><td>Backlog cost</td><td><code>95</code></td><td>Cost per unfilled demand unit per period.</td></tr>
+              <tr><td>Demand</td><td><code>Uniform{0,1,2,3,4}</code></td><td>Mean demand is 2 units per period.</td></tr>
+              <tr><td>Maximum order</td><td><code>4</code> per supplier</td><td>Each period's action is one of 25 order pairs.</td></tr>
+              <tr><td>Inventory bound</td><td><code>&plusmn;1000</code></td><td>Wide encoded bound used by the existing ORSuite environment.</td></tr>
+              <tr><td>Episode length</td><td><code>100</code></td><td>One evaluation episode represents 100 inventory periods.</td></tr>
+              <tr><td>Initial state</td><td>Empty pipeline, zero net inventory</td><td>No inventory or outstanding orders at reset.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout warning">
+          <strong>How to describe realism accurately</strong>
+          <p>The values are an <em>ORSuite-compatible analogue</em> of the <code>ds2_lr=2_b=95_h=5_u04</code> dual-sourcing setting described by <a href="https://doi.org/10.1287/ijoc.2022.0136">B&ouml;ttcher, Asikis, and Fragkos (2023)</a>, not a direct reproduction of their experiment. Their <a href="https://github.com/INFORMSJoC/2022.0136/blob/2400e151fbebcfd814ee210a79b4e8b8240768aa/code/sourcing_models/recursion_input_files/ds2_lr%3D2_b%3D95_h%3D5_u04.in">archived instance</a> uses lead times 0 and 2; these were shifted to 1 and 3 because this ORSuite environment requires positive lead times.</p>
+        </div>
+
+        <div class="grid-2">
+          <div class="panel amber">
+            <h3>What the units mean</h3>
+            <p>Costs are normalized research units, not dollars. The regular supplier's zero means no <em>incremental premium</em> relative to the baseline, not that real supply is free.</p>
+          </div>
+          <div class="panel blue">
+            <h3>What not to claim</h3>
+            <p>The 0.95 critical-fractile ratio, <code>95 / (95 + 5)</code>, expresses the backlog-versus-holding tradeoff. It is not a guaranteed 95% service level.</p>
+          </div>
+        </div>
+
+        <div class="figure-pair">
+          <figure>
+            <img src="assets/notebook-parameters.png" alt="Notebook section explaining the benchmark parameter rationale">
+            <figcaption>The notebook labels the configuration as a literature-inspired analogue and explains the lead-time shift.</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/notebook-config-output.png" alt="Notebook output listing the exact inventory benchmark configuration">
+            <figcaption>The executed configuration exposes every numerical setting used by the experiment.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section id="algorithms">
+        <div class="eyebrow">3 &middot; Learning algorithms</div>
+        <h2>Two Stable-Baselines3 baselines</h2>
+        <p class="section-intro">PPO and DQN use different learning methods, but both can choose from exactly the same 25 inventory decisions. The comparison is an integration benchmark, not a tuned contest or universal ranking.</p>
+
+        <div class="grid-2">
+          <div class="panel blue">
+            <h3>PPO</h3>
+            <p><strong>Proximal Policy Optimization</strong> is an on-policy policy-gradient method. It directly supports ORSuite's native <code>MultiDiscrete([5, 5])</code> action space.</p>
+            <ul>
+              <li><code>MlpPolicy</code>, <code>gamma=0.99</code></li>
+              <li><code>n_steps=512</code>, <code>batch_size=64</code></li>
+              <li><code>n_epochs=10</code>, <code>learning_rate=3e-4</code></li>
+            </ul>
+          </div>
+          <div class="panel red">
+            <h3>DQN</h3>
+            <p><strong>Deep Q-Network</strong> learns action values off-policy. SB3 DQN requires a single <code>Discrete</code> action, so a reversible wrapper maps integers 0&ndash;24 to the same 25 order pairs.</p>
+            <ul>
+              <li><code>MlpPolicy</code>, <code>gamma=0.99</code>, <code>learning_rate=1e-4</code></li>
+              <li><code>learning_starts=1000</code>, <code>buffer_size=50000</code></li>
+              <li><code>batch_size=64</code>, <code>train_freq=4</code></li>
+              <li><code>gradient_steps=1</code>, <code>target_update_interval=10000</code></li>
+              <li><code>exploration_fraction=0.3</code></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="callout blue">
+          <strong>Fair action access</strong>
+          <p>For DQN, discrete action <code>a</code> decodes to <code>[a // 5, a % 5]</code>. This is a one-to-one mapping, so DQN does not lose any feasible inventory decision. The two algorithms differ only in action representation and learning procedure.</p>
+        </div>
+
+        <h3>Reward scaling</h3>
+        <p>Training divides the negative cost reward by 100 to improve numerical conditioning. Evaluation uses the original environment with <strong>unscaled costs</strong>, so the plot and CSV remain directly interpretable.</p>
+
+        <div class="figure-stack">
+          <figure>
+            <img src="assets/notebook-experiment-design.png" alt="Notebook explanation of PPO, DQN, action fairness, and evaluation design">
+            <figcaption>The notebook states the action-space equivalence and separates training reward scaling from evaluation cost.</figcaption>
+          </figure>
+          <figure>
+            <a href="assets/notebook-experiment-settings.png" aria-label="Open the full experiment settings notebook screenshot">
+              <div class="notebook-crop">
+                <img src="assets/notebook-experiment-settings.png" alt="Notebook code and output showing the PPO and DQN experiment settings">
+              </div>
+            </a>
+            <figcaption>The algorithm settings, seeds, checkpoint schedule, and run controls are explicit. The linked full screenshot also includes the saved run output.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section id="evaluation">
+        <div class="eyebrow">4 &middot; Evaluation design</div>
+        <h2>How performance was measured</h2>
+        <p class="section-intro">The evaluation separates training randomness from a fixed held-out test set. At every checkpoint, each policy sees the same demand scenarios and is scored using positive, unscaled cost per period.</p>
+
+        <div class="metric-strip">
+          <div class="metric"><span>Training seeds</span><strong>3</strong><small>0, 1, and 2</small></div>
+          <div class="metric"><span>Requested training</span><strong>50k</strong><small>timesteps per algorithm and seed</small></div>
+          <div class="metric"><span>Held-out evaluation</span><strong>20</strong><small>100-period episodes per seed and checkpoint</small></div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Control</th><th>Implementation</th><th>Why it matters</th></tr></thead>
+            <tbody>
+              <tr><td>Training seeds</td><td><code>0, 1, 2</code></td><td>Shows sensitivity to independent model initialization and experience.</td></tr>
+              <tr><td>Checkpoint schedule</td><td>Requested every 10,000 timesteps</td><td>Measures learning during training rather than only the final model.</td></tr>
+              <tr><td>Evaluation seed</td><td><code>100000</code></td><td>Produces fixed held-out demand trajectories shared by algorithms.</td></tr>
+              <tr><td>Episodes per checkpoint</td><td>20 per training seed</td><td>Averages over multiple stochastic demand paths.</td></tr>
+              <tr><td>Evaluation policy</td><td>Deterministic action selection</td><td>Removes action-sampling noise from the comparison.</td></tr>
+              <tr><td>Metric</td><td>Mean original cost per period</td><td>Comparable to the heuristic and understandable as an inventory objective.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout warning">
+          <strong>Why PPO's x-values are not exact multiples of 10,000</strong>
+          <p>PPO trains in complete 512-step rollouts. Its actual checkpoints are 10,240; 20,480; 30,208; 40,448; and 50,176 timesteps. The plot reports those exact SB3 counters rather than relabeling them as rounded targets.</p>
+        </div>
+
+        <h3>Adapted TBS reference</h3>
+        <p>A simple tailored-base-surge policy provides an inventory-specific reference: a regular base order of <strong>1</strong> and a fast order-up-to target of <strong>7</strong>. It was selected on separate calibration scenarios using seed 1,100,000, then evaluated on the same held-out scenarios as PPO and DQN.</p>
+        <p>This is an <strong>adapted reference baseline</strong>, not a reproduction of a published paper result. It also encodes inventory structure directly, while the neural baselines learn from generic observations, so its comparison is informative but not a claim of identical prior knowledge.</p>
+      </section>
+
+      <section id="results">
+        <div class="eyebrow">5 &middot; Results</div>
+        <h2>Training timesteps versus performance</h2>
+        <p class="section-intro">The plot uses actual SB3 timesteps on the x-axis and held-out mean cost per period on a logarithmic y-axis. Lower values are better. Shaded bands show variation across the three training seeds.</p>
+
+        <figure class="plot">
+          <img src="assets/inventory-learning-curves.svg" alt="Learning curves comparing PPO, DQN, and an adapted TBS reference on the inventory benchmark">
+          <figcaption>Saved experiment figure. PPO is blue, DQN is red, and the dashed green line is the adapted TBS reference.</figcaption>
+        </figure>
+
+        <div class="metric-strip">
+          <div class="metric"><span>Final PPO</span><strong>216.529</strong><small>cost/period &middot; seed SD 279.952</small></div>
+          <div class="metric"><span>Final DQN</span><strong>420.887</strong><small>cost/period &middot; seed SD 226.614</small></div>
+          <div class="metric"><span>TBS reference</span><strong>33.810</strong><small>cost/period</small></div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Checkpoint</th><th class="numeric">PPO cost/period</th><th class="numeric">DQN cost/period</th></tr></thead>
+            <tbody>
+              <tr><td>~10k timesteps</td><td class="numeric">2,138.702</td><td class="numeric">1,001.716</td></tr>
+              <tr><td>~20k timesteps</td><td class="numeric">7,516.058</td><td class="numeric">174.993</td></tr>
+              <tr><td>~30k timesteps</td><td class="numeric">5,164.829</td><td class="numeric">112.031</td></tr>
+              <tr><td>~40k timesteps</td><td class="numeric">1,804.643</td><td class="numeric">371.508</td></tr>
+              <tr><td>~50k timesteps</td><td class="numeric"><strong>216.529</strong></td><td class="numeric"><strong>420.887</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout">
+          <strong>Honest interpretation</strong>
+          <p>PPO has the lower final neural-policy cost in this run, but DQN is much better at the middle checkpoints and reaches its best value near 30,000 timesteps. Both show substantial instability across seeds, and the adapted TBS heuristic remains clearly stronger. These results verify the training and evaluation pipeline; they do not establish that PPO is universally better than DQN or that either model is tuned.</p>
+        </div>
+
+        <figure>
+          <img src="assets/notebook-learning-curves.png" alt="Executed notebook cell displaying the inventory learning curves">
+          <figcaption>The learning curve is generated directly inside the executed notebook and also saved as SVG.</figcaption>
+        </figure>
+        <div class="figure-pair">
+          <figure>
+            <img src="assets/notebook-results.png" alt="Notebook explanation of the benchmark results">
+            <figcaption>The notebook tells the reader how to interpret the plot without overstating the evidence.</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/notebook-results-output.png" alt="Notebook result table and artifact paths">
+            <figcaption>The executed notebook prints the final summary and the saved CSV/SVG artifact locations.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section id="limitations">
+        <div class="eyebrow">6 &middot; Interpretation</div>
+        <h2>Limitations and research directions</h2>
+        <p class="section-intro">This benchmark verifies a reproducible Gymnasium-to-SB3 workflow under one controlled inventory configuration. It is not a definitive algorithm ranking or a calibrated deployment study.</p>
+
+        <div class="grid-2">
+          <div class="panel">
+            <h3>What the experiment establishes</h3>
+            <ul>
+              <li>The migrated environment passes Gymnasium validation.</li>
+              <li>PPO and DQN can train against the same feasible inventory decisions.</li>
+              <li>Held-out evaluation and checkpoint plotting run reproducibly.</li>
+              <li>An inventory-specific reference exposes the gap to structured policies.</li>
+            </ul>
+          </div>
+          <div class="panel amber">
+            <h3>What remains uncertain</h3>
+            <ul>
+              <li>Three training seeds are not enough for a definitive statistical comparison.</li>
+              <li>The algorithms were not independently tuned or trained to convergence.</li>
+              <li>Demand and costs are synthetic research units, not company data.</li>
+              <li>The setting contains one product and two suppliers only.</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>Potential next experiments</h3>
+        <ol>
+          <li>Increase the training budget and number of independent seeds.</li>
+          <li>Tune PPO and DQN separately under equal evaluation rules.</li>
+          <li>Test normalized observations to reduce the 2,021-dimensional one-hot input.</li>
+          <li>Compare additional inventory-specific heuristics and policy architectures.</li>
+          <li>Evaluate whether zero-period lead times should be supported for closer literature replication.</li>
+        </ol>
+
+        <figure>
+          <img src="assets/notebook-limitations.png" alt="Notebook limitations and reproducibility notes">
+          <figcaption>The notebook records scope limitations and separates integration evidence from stronger algorithmic claims.</figcaption>
+        </figure>
+      </section>
+
+      <section id="reproducibility">
+        <div class="eyebrow">7 &middot; Reproducibility</div>
+        <h2>Run the benchmark from a clean environment</h2>
+        <p class="section-intro">A pinned dependency file, fast smoke mode, saved CSV/SVG outputs, and a provenance manifest make the experiment inspectable without retraining during a presentation.</p>
+
+        <pre><code>conda create -n orsuite-inventory python=3.11 pip
+conda activate orsuite-inventory
+python -m pip install -r examples/inventory_algorithm_comparison_requirements.txt
+python examples/inventory_algorithm_comparison.py --smoke-test
+jupyter lab examples/inventory_algorithm_comparison.ipynb</code></pre>
+
+        <p>The manifest records exact runtime versions and SHA-256 hashes for the implementation and saved artifacts. Full regeneration is available by setting <code>RUN_EXPERIMENT = True</code> in the notebook.</p>
+
+        <figure>
+          <img src="assets/notebook-setup.png" alt="Notebook setup instructions and environment validation">
+          <figcaption>The executable notebook includes setup, imports, environment validation, saved-result loading, and full-regeneration controls.</figcaption>
+        </figure>
+
+        <h3>Benchmark source</h3>
+        <p>The configuration is an ORSuite-compatible analogue of the dual-sourcing instance from <a href="https://doi.org/10.1287/ijoc.2022.0136">B&ouml;ttcher, Asikis, and Fragkos (2023)</a>. The <a href="https://github.com/INFORMSJoC/2022.0136/blob/2400e151fbebcfd814ee210a79b4e8b8240768aa/code/sourcing_models/recursion_input_files/ds2_lr%3D2_b%3D95_h%3D5_u04.in">archived parameter instance</a> is publicly available.</p>
+
+        <div class="footer">
+          All numerical results shown above are loaded from the saved experiment summary generated by the benchmark workflow.
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
